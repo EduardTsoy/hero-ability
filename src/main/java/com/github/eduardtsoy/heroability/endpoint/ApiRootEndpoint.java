@@ -38,15 +38,14 @@ public class ApiRootEndpoint {
         final LinkImpl selfLink = new LinkImpl();
         selfLink.setRel("self");
         selfLink.setTitle("root");
-        final String absPath = uriInfo.getAbsolutePath().toString();
-        selfLink.setHref(absPath);
+        selfLink.setHref(uriInfo.getBaseUriBuilder().toString());
         links.add(selfLink);
 
-        final LinkImpl herosApiLink = new LinkImpl();
-        herosApiLink.setRel("hero-api");
-        herosApiLink.setTitle("Hero list");
-        herosApiLink.setHref(uriInfo.getAbsolutePathBuilder().path("heros").toString());
-        links.add(herosApiLink);
+        final LinkImpl heroesApiLink = new LinkImpl();
+        heroesApiLink.setRel("hero-api");
+        heroesApiLink.setTitle("Hero list");
+        heroesApiLink.setHref(uriInfo.getBaseUriBuilder().path(HeroEndpoint.HEROES_PATH).toString());
+        links.add(heroesApiLink);
 
         final LinkImpl abilitiesApiLink = new LinkImpl();
         abilitiesApiLink.setRel("abilities-api");

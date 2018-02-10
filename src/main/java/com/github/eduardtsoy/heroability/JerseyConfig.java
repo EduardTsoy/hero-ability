@@ -1,5 +1,6 @@
 package com.github.eduardtsoy.heroability;
 
+import com.github.eduardtsoy.heroability.endpoint.AbilityEndpoint;
 import com.github.eduardtsoy.heroability.endpoint.ApiRootEndpoint;
 import com.github.eduardtsoy.heroability.endpoint.HeroEndpoint;
 import io.swagger.jaxrs.config.BeanConfig;
@@ -29,7 +30,7 @@ public class JerseyConfig extends ResourceConfig {
 
         register(ApiRootEndpoint.class);
         register(HeroEndpoint.class);
-        // TODO: register(AbilityEndpoint.class);
+        register(AbilityEndpoint.class);
     }
 
     // Swagger auto-generates API description in JSON or YAML format
