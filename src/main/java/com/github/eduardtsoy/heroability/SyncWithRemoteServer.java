@@ -59,30 +59,35 @@ public class SyncWithRemoteServer {
 
     private void syncHeroes() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + HERO_URI_PATH);
-        final Map<Long, HeroData> savedHeroes = heroRepository
-                .findAll().stream()
-                .collect(Collectors.toMap(HeroData::getId, Function.identity()));
+        Map<Long, HeroData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
+        // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
-            log.debug("// Loading from " + pageLink);
+            log.debug("// Loading " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
             statusFamily = response.getStatusInfo().getFamily();
             if (SUCCESSFUL.equals(statusFamily)) {
+                if (fromOurDatabase == null) {
+                    fromOurDatabase = heroRepository
+                            .findAll().stream()
+                            .collect(Collectors
+                                    .toMap(HeroData::getId, Function.identity()));
+                }
                 final HeroesIn heroes = response.readEntity(HeroesIn.class);
                 log.debug("// " + heroes);
-                heroes.getData().forEach(hero -> {
-                    if (savedHeroes.containsKey(hero.getId())) {
-                        final HeroData existing = savedHeroes.get(hero.getId());
-                        log.debug(existing.toString());
-                        existing.setName(hero.getName());
-                        existing.setRealName(hero.getRealName());
-                        existing.setHealth(hero.getHealth());
-                        existing.setArmour(hero.getArmour());
-                        existing.setShield(hero.getShield());
+                final Map<Long, HeroData> localData = fromOurDatabase;
+                heroes.getData().forEach(received -> {
+                    if (localData.containsKey(received.getId())) {
+                        final HeroData existing = localData.get(received.getId());
+                        existing.setName(received.getName());
+                        existing.setRealName(received.getRealName());
+                        existing.setHealth(received.getHealth());
+                        existing.setArmour(received.getArmour());
+                        existing.setShield(received.getShield());
                         heroRepository.save(existing);
                     } else {
-                        heroRepository.save(convertHeroInToData(hero));
+                        heroRepository.save(convertHeroToJpaEntity(received));
                     }
                 });
                 if (heroes.getNext() == null) {
@@ -97,7 +102,7 @@ public class SyncWithRemoteServer {
         } while (SUCCESSFUL.equals(statusFamily));
     }
 
-    private HeroData convertHeroInToData(final HeroIn received) {
+    private HeroData convertHeroToJpaEntity(final HeroIn received) {
         final HeroData result = new HeroData();
         result.setId(received.getId());
         result.setName(received.getName());
@@ -110,27 +115,32 @@ public class SyncWithRemoteServer {
 
     private void syncAbilities() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + ABILITY_URI_PATH);
-        final Map<Long, AbilityData> savedAbilities = abilityRepository
-                .findAll().stream()
-                .collect(Collectors.toMap(AbilityData::getId, Function.identity()));
+        Map<Long, AbilityData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
+        // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
-            log.debug("// Loading from " + pageLink);
+            log.debug("// Loading " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
             statusFamily = response.getStatusInfo().getFamily();
             if (SUCCESSFUL.equals(statusFamily)) {
+                if (fromOurDatabase == null) {
+                    fromOurDatabase = abilityRepository
+                            .findAll().stream()
+                            .collect(Collectors
+                                    .toMap(AbilityData::getId, Function.identity()));
+                }
                 final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
-                abilities.getData().forEach(ability -> {
-                    if (savedAbilities.containsKey(ability.getId())) {
-                        final AbilityData existing = savedAbilities.get(ability.getId());
-                        log.debug(existing.toString());
-                        existing.setName(ability.getName());
-                        existing.setDescription(ability.getDescription());
-                        existing.setUltimate(ability.getUltimate());
+                final Map<Long, AbilityData> localData = fromOurDatabase;
+                abilities.getData().forEach(received -> {
+                    if (localData.containsKey(received.getId())) {
+                        final AbilityData existing = localData.get(received.getId());
+                        existing.setName(received.getName());
+                        existing.setDescription(received.getDescription());
+                        existing.setUltimate(received.getUltimate());
                         abilityRepository.save(existing);
                     } else {
-                        abilityRepository.save(convertAbilityInToData(ability));
+                        abilityRepository.save(convertAbilityToJpaEntity(received));
                     }
                 });
                 if (abilities.getNext() == null) {
@@ -145,7 +155,7 @@ public class SyncWithRemoteServer {
         } while (SUCCESSFUL.equals(statusFamily));
     }
 
-    private AbilityData convertAbilityInToData(@Nonnull final AbilityIn received) {
+    private AbilityData convertAbilityToJpaEntity(@Nonnull final AbilityIn received) {
         final AbilityData result = new AbilityData();
         result.setId(received.getId());
         result.setName(received.getName());
