@@ -12,5 +12,9 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Heroes {
 
+    // Hypermedia navigation
+    private String next;
+
+    // Data
     private List<Hero> data = new ArrayList<>();
 }
