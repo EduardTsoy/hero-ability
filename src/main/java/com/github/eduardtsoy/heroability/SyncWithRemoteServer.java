@@ -1,10 +1,12 @@
 package com.github.eduardtsoy.heroability;
 
-import com.github.eduardtsoy.heroability.domain.Abilities;
-import com.github.eduardtsoy.heroability.domain.Ability;
-import com.github.eduardtsoy.heroability.domain.Hero;
-import com.github.eduardtsoy.heroability.domain.Heroes;
+import com.github.eduardtsoy.heroability.incoming.AbilitiesIn;
+import com.github.eduardtsoy.heroability.incoming.part.AbilityIn;
+import com.github.eduardtsoy.heroability.incoming.part.HeroIn;
+import com.github.eduardtsoy.heroability.incoming.HeroesIn;
+import com.github.eduardtsoy.heroability.repository.AbilityData;
 import com.github.eduardtsoy.heroability.repository.AbilityRepository;
+import com.github.eduardtsoy.heroability.repository.HeroData;
 import com.github.eduardtsoy.heroability.repository.HeroRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,9 +52,9 @@ public class SyncWithRemoteServer {
 
     private void syncHeroes() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + HERO_URI_PATH);
-        final Map<Long, Hero> savedHeroes = heroRepository
+        final Map<Long, HeroData> savedHeroes = heroRepository
                 .findAll().stream()
-                .collect(Collectors.toMap(Hero::getId, Function.identity()));
+                .collect(Collectors.toMap(HeroData::getId, Function.identity()));
         do {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
@@ -60,10 +62,10 @@ public class SyncWithRemoteServer {
             if (Response.Status.Family.REDIRECTION.equals(response.getStatusInfo().getFamily())) {
                 pageLink = response.getLocation();
             } else {
-                final Heroes heroes = response.readEntity(Heroes.class);
+                final HeroesIn heroes = response.readEntity(HeroesIn.class);
                 heroes.getData().forEach(hero -> {
                     if (savedHeroes.containsKey(hero.getId())) {
-                        final Hero existing = savedHeroes.get(hero.getId());
+                        final HeroData existing = savedHeroes.get(hero.getId());
                         log.debug(existing.toString());
                         existing.setName(hero.getName());
                         existing.setRealName(hero.getRealName());
@@ -72,7 +74,7 @@ public class SyncWithRemoteServer {
                         existing.setShield(hero.getShield());
                         heroRepository.save(existing);
                     } else {
-                        heroRepository.save(hero);
+                        heroRepository.save(convertDtoToData(hero));
                     }
                 });
                 if (heroes.getNext() == null) {
@@ -83,11 +85,22 @@ public class SyncWithRemoteServer {
         } while (true);
     }
 
+    private HeroData convertDtoToData(final HeroIn dto) {
+        final HeroData result = new HeroData();
+        result.setId(dto.getId());
+        result.setName(dto.getName());
+        result.setRealName(dto.getRealName());
+        result.setHealth(dto.getHealth());
+        result.setArmour(dto.getArmour());
+        result.setShield(dto.getShield());
+        return result;
+    }
+
     private void syncAbilities() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + ABILITY_URI_PATH);
-        final Map<Long, Ability> savedAbilities = abilityRepository
+        final Map<Long, AbilityData> savedAbilities = abilityRepository
                 .findAll().stream()
-                .collect(Collectors.toMap(Ability::getId, Function.identity()));
+                .collect(Collectors.toMap(AbilityData::getId, Function.identity()));
         do {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
@@ -95,17 +108,17 @@ public class SyncWithRemoteServer {
             if (Response.Status.Family.REDIRECTION.equals(response.getStatusInfo().getFamily())) {
                 pageLink = response.getLocation();
             } else {
-                final Abilities abilities = response.readEntity(Abilities.class);
+                final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
                 abilities.getData().forEach(ability -> {
                     if (savedAbilities.containsKey(ability.getId())) {
-                        final Ability existing = savedAbilities.get(ability.getId());
+                        final AbilityData existing = savedAbilities.get(ability.getId());
                         log.debug(existing.toString());
                         existing.setName(ability.getName());
                         existing.setDescription(ability.getDescription());
                         existing.setUltimate(ability.getUltimate());
                         abilityRepository.save(existing);
                     } else {
-                        abilityRepository.save(ability);
+                        abilityRepository.save(convertDtoToData(ability));
                     }
                 });
                 if (abilities.getNext() == null) {
@@ -114,6 +127,15 @@ public class SyncWithRemoteServer {
                 pageLink = URI.create(abilities.getNext());
             }
         } while (true);
+    }
+
+    private AbilityData convertDtoToData(final AbilityIn dto) {
+        final AbilityData result = new AbilityData();
+        result.setId(dto.getId());
+        result.setName(dto.getName());
+        result.setDescription(dto.getDescription());
+        result.setUltimate(dto.getUltimate());
+        return result;
     }
 
 }
