@@ -1,6 +1,11 @@
-###
-#   Database Settings
-###
+logging:
+  level:
+    com.github: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d %-5level %logger : %msg%n"
+    file: "%d %-5level [%thread] %logger : %msg%n"
+
 flyway:
   locations: db/migration/{vendor}
 spring:
@@ -19,14 +24,10 @@ spring:
         show_sql: true
         use_sql_comments: true
         format_sql: true
-
-###
-#   H2 Settings
-###
   h2:
     console:
       enabled: true
       path: /console
       settings:
         trace: false
-        web-allow-others: false
+        web-allow-others: true
