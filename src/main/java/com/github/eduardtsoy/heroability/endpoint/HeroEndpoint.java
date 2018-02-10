@@ -29,10 +29,10 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 @Component
 @Path(HeroEndpoint.HEROS)
 @Produces({MediaType.APPLICATION_JSON})
-@Api(value = "heros", description = "Welcome to Hero API")
+@Api(value = HeroEndpoint.HEROS, description = "Welcome to Heroes API")
 public class HeroEndpoint {
 
-    static final String HEROS = "heros";
+    static final String HEROS = "/heros";
 
     @Context
     private UriInfo uriInfo;

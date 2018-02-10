@@ -46,7 +46,7 @@ public class SyncWithRemoteServer {
         this.abilityRepository = abilityRepository;
     }
 
-    @Scheduled(cron = "*/10 */1 * * * *")
+    @Scheduled(cron = "0 */1 * * * *")
     public void syncDatabase() {
         syncHeroes();
         syncAbilities();
@@ -62,13 +62,13 @@ public class SyncWithRemoteServer {
         final Map<Long, HeroData> savedHeroes = heroRepository
                 .findAll().stream()
                 .collect(Collectors.toMap(HeroData::getId, Function.identity()));
+        Response.Status.Family statusFamily;
         do {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
-            if (REDIRECTION.equals(response.getStatusInfo().getFamily())) {
-                pageLink = response.getLocation();
-            } else if (SUCCESSFUL.equals(response.getStatusInfo().getFamily())) {
+            statusFamily = response.getStatusInfo().getFamily();
+            if (SUCCESSFUL.equals(statusFamily)) {
                 final HeroesIn heroes = response.readEntity(HeroesIn.class);
                 log.debug("// " + heroes);
                 heroes.getData().forEach(hero -> {
@@ -89,8 +89,12 @@ public class SyncWithRemoteServer {
                     break;
                 }
                 pageLink = URI.create(heroes.getNext());
+            } else if (REDIRECTION.equals(statusFamily)) {
+                pageLink = response.getLocation();
+            } else {
+                log.error("// Received " + statusFamily + " response from remote web API: " + response);
             }
-        } while (true);
+        } while (SUCCESSFUL.equals(statusFamily));
     }
 
     private HeroData convertHeroInToData(final HeroIn received) {
@@ -109,13 +113,13 @@ public class SyncWithRemoteServer {
         final Map<Long, AbilityData> savedAbilities = abilityRepository
                 .findAll().stream()
                 .collect(Collectors.toMap(AbilityData::getId, Function.identity()));
+        Response.Status.Family statusFamily;
         do {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
-            if (REDIRECTION.equals(response.getStatusInfo().getFamily())) {
-                pageLink = response.getLocation();
-            } else if (SUCCESSFUL.equals(response.getStatusInfo().getFamily())) {
+            statusFamily = response.getStatusInfo().getFamily();
+            if (SUCCESSFUL.equals(statusFamily)) {
                 final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
                 abilities.getData().forEach(ability -> {
                     if (savedAbilities.containsKey(ability.getId())) {
@@ -133,8 +137,12 @@ public class SyncWithRemoteServer {
                     break;
                 }
                 pageLink = URI.create(abilities.getNext());
+            } else if (REDIRECTION.equals(statusFamily)) {
+                pageLink = response.getLocation();
+            } else {
+                log.error("// Received " + statusFamily + " response from remote web API: " + response);
             }
-        } while (true);
+        } while (SUCCESSFUL.equals(statusFamily));
     }
 
     private AbilityData convertAbilityInToData(@Nonnull final AbilityIn received) {

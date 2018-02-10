@@ -1,5 +1,6 @@
 package com.github.eduardtsoy.heroability;
 
+import com.github.eduardtsoy.heroability.endpoint.ApiRootEndpoint;
 import com.github.eduardtsoy.heroability.endpoint.HeroEndpoint;
 import io.swagger.jaxrs.config.BeanConfig;
 import io.swagger.jaxrs.listing.ApiListingResource;
@@ -20,13 +21,16 @@ public class JerseyConfig extends ResourceConfig {
     }
 
     private void configureEndpoints() {
-        register(WadlResource.class); // WADL support built into JAX-RS
+        // WADL support built into JAX-RS generates web API description in XML format
+        // See it by sending a GET request to http://localhost:8080/api/application.wadl with http header Accept: applicaton/xml
+        register(WadlResource.class);
 
+        register(ApiRootEndpoint.class);
         register(HeroEndpoint.class);
         // TODO: register(AbilityEndpoint.class);
     }
 
-    // Swagger auto-generates API documentation in JSON and YAML formats
+    // Swagger auto-generates API description in JSON or YAML format
     // See http://localhost:8080/api/swagger.json and http://localhost:8080/api/swagger.json
     private void configureSwagger() {
         register(ApiListingResource.class);
