@@ -1,9 +1,9 @@
 package com.github.eduardtsoy.heroability;
 
 import com.github.eduardtsoy.heroability.incoming.AbilitiesIn;
+import com.github.eduardtsoy.heroability.incoming.HeroesIn;
 import com.github.eduardtsoy.heroability.incoming.part.AbilityIn;
 import com.github.eduardtsoy.heroability.incoming.part.HeroIn;
-import com.github.eduardtsoy.heroability.incoming.HeroesIn;
 import com.github.eduardtsoy.heroability.repository.AbilityData;
 import com.github.eduardtsoy.heroability.repository.AbilityRepository;
 import com.github.eduardtsoy.heroability.repository.HeroData;
@@ -23,6 +23,9 @@ import java.net.URI;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static javax.ws.rs.core.Response.Status.Family.REDIRECTION;
+import static javax.ws.rs.core.Response.Status.Family.SUCCESSFUL;
 
 @Component
 @Slf4j
@@ -50,6 +53,10 @@ public class SyncWithRemoteServer {
         heroRepository.flush();
     }
 
+    /* ------------------
+     * PRIVATE METHODS
+     */
+
     private void syncHeroes() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + HERO_URI_PATH);
         final Map<Long, HeroData> savedHeroes = heroRepository
@@ -59,10 +66,11 @@ public class SyncWithRemoteServer {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
-            if (Response.Status.Family.REDIRECTION.equals(response.getStatusInfo().getFamily())) {
+            if (REDIRECTION.equals(response.getStatusInfo().getFamily())) {
                 pageLink = response.getLocation();
-            } else {
+            } else if (SUCCESSFUL.equals(response.getStatusInfo().getFamily())) {
                 final HeroesIn heroes = response.readEntity(HeroesIn.class);
+                log.debug("// " + heroes);
                 heroes.getData().forEach(hero -> {
                     if (savedHeroes.containsKey(hero.getId())) {
                         final HeroData existing = savedHeroes.get(hero.getId());
@@ -74,7 +82,7 @@ public class SyncWithRemoteServer {
                         existing.setShield(hero.getShield());
                         heroRepository.save(existing);
                     } else {
-                        heroRepository.save(convertDtoToData(hero));
+                        heroRepository.save(convertHeroInToData(hero));
                     }
                 });
                 if (heroes.getNext() == null) {
@@ -85,14 +93,14 @@ public class SyncWithRemoteServer {
         } while (true);
     }
 
-    private HeroData convertDtoToData(final HeroIn dto) {
+    private HeroData convertHeroInToData(final HeroIn received) {
         final HeroData result = new HeroData();
-        result.setId(dto.getId());
-        result.setName(dto.getName());
-        result.setRealName(dto.getRealName());
-        result.setHealth(dto.getHealth());
-        result.setArmour(dto.getArmour());
-        result.setShield(dto.getShield());
+        result.setId(received.getId());
+        result.setName(received.getName());
+        result.setRealName(received.getRealName());
+        result.setHealth(received.getHealth());
+        result.setArmour(received.getArmour());
+        result.setShield(received.getShield());
         return result;
     }
 
@@ -105,9 +113,9 @@ public class SyncWithRemoteServer {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading from " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
-            if (Response.Status.Family.REDIRECTION.equals(response.getStatusInfo().getFamily())) {
+            if (REDIRECTION.equals(response.getStatusInfo().getFamily())) {
                 pageLink = response.getLocation();
-            } else {
+            } else if (SUCCESSFUL.equals(response.getStatusInfo().getFamily())) {
                 final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
                 abilities.getData().forEach(ability -> {
                     if (savedAbilities.containsKey(ability.getId())) {
@@ -118,7 +126,7 @@ public class SyncWithRemoteServer {
                         existing.setUltimate(ability.getUltimate());
                         abilityRepository.save(existing);
                     } else {
-                        abilityRepository.save(convertDtoToData(ability));
+                        abilityRepository.save(convertAbilityInToData(ability));
                     }
                 });
                 if (abilities.getNext() == null) {
@@ -129,12 +137,12 @@ public class SyncWithRemoteServer {
         } while (true);
     }
 
-    private AbilityData convertDtoToData(final AbilityIn dto) {
+    private AbilityData convertAbilityInToData(@Nonnull final AbilityIn received) {
         final AbilityData result = new AbilityData();
-        result.setId(dto.getId());
-        result.setName(dto.getName());
-        result.setDescription(dto.getDescription());
-        result.setUltimate(dto.getUltimate());
+        result.setId(received.getId());
+        result.setName(received.getName());
+        result.setDescription(received.getDescription());
+        result.setUltimate(received.getUltimate());
         return result;
     }
 

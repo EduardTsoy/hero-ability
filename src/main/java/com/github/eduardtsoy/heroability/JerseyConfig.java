@@ -25,14 +25,14 @@ public class JerseyConfig extends ResourceConfig {
         // TODO: register(AbilityEndpoint.class);
     }
 
-    // also support Swagger as a more popular way to generate Web API documentation
+    // FIXME: Swagger seems to be not working yet
     private void configureSwagger() {
         final BeanConfig beanConfig = new BeanConfig();
         beanConfig.setVersion("1.0.2");
         // todo: retrieve schemes, host and port from Spring Boot configuration
         beanConfig.setSchemes(new String[]{"http"});
         beanConfig.setHost("localhost:8080");
-        beanConfig.setBasePath("/api-docs");
+        beanConfig.setBasePath("/api/heros");
         beanConfig.setResourcePackage("com.github.eduardtsoy");
         beanConfig.setPrettyPrint(true);
         beanConfig.setScan(true);
