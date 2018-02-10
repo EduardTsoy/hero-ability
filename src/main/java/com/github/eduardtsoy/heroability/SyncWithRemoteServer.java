@@ -21,6 +21,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,7 +47,7 @@ public class SyncWithRemoteServer {
         this.abilityRepository = abilityRepository;
     }
 
-    @Scheduled(cron = "0 */1 * * * *")
+    @Scheduled(cron = "*/20 */1 * * * *")
     public void syncDatabase() {
         syncHeroes();
         syncAbilities();
@@ -61,6 +62,8 @@ public class SyncWithRemoteServer {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + HERO_URI_PATH);
         Map<Long, HeroData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
+        int countTotal = 0;
+        final AtomicInteger countNew = new AtomicInteger();
         // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
@@ -77,6 +80,7 @@ public class SyncWithRemoteServer {
                 final HeroesIn heroes = response.readEntity(HeroesIn.class);
                 log.debug("// " + heroes);
                 final Map<Long, HeroData> localData = fromOurDatabase;
+                countTotal += heroes.getData().size();
                 heroes.getData().forEach(received -> {
                     if (localData.containsKey(received.getId())) {
                         final HeroData existing = localData.get(received.getId());
@@ -87,6 +91,7 @@ public class SyncWithRemoteServer {
                         existing.setShield(received.getShield());
                         heroRepository.save(existing);
                     } else {
+                        countNew.incrementAndGet();
                         heroRepository.save(convertHeroToJpaEntity(received));
                     }
                 });
@@ -98,8 +103,11 @@ public class SyncWithRemoteServer {
                 pageLink = response.getLocation();
             } else {
                 log.error("// Received " + statusFamily + " response from remote web API: " + response);
+                break;
             }
-        } while (SUCCESSFUL.equals(statusFamily));
+        } while (true);
+        log.info("// Synced " + countTotal + " heroes from remote web API in total" +
+                (countNew.get() > 0 ? ", " + countNew + " of them have been inserted" : ""));
     }
 
     private HeroData convertHeroToJpaEntity(final HeroIn received) {
@@ -117,12 +125,15 @@ public class SyncWithRemoteServer {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + ABILITY_URI_PATH);
         Map<Long, AbilityData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
+        int countTotal = 0;
+        final AtomicInteger countNew = new AtomicInteger();
         // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
             log.debug("// Loading " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
             statusFamily = response.getStatusInfo().getFamily();
+            log.debug("// " + statusFamily);
             if (SUCCESSFUL.equals(statusFamily)) {
                 if (fromOurDatabase == null) {
                     fromOurDatabase = abilityRepository
@@ -132,6 +143,7 @@ public class SyncWithRemoteServer {
                 }
                 final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
                 final Map<Long, AbilityData> localData = fromOurDatabase;
+                countTotal += abilities.getData().size();
                 abilities.getData().forEach(received -> {
                     if (localData.containsKey(received.getId())) {
                         final AbilityData existing = localData.get(received.getId());
@@ -140,6 +152,7 @@ public class SyncWithRemoteServer {
                         existing.setUltimate(received.getUltimate());
                         abilityRepository.save(existing);
                     } else {
+                        countNew.incrementAndGet();
                         abilityRepository.save(convertAbilityToJpaEntity(received));
                     }
                 });
@@ -151,8 +164,11 @@ public class SyncWithRemoteServer {
                 pageLink = response.getLocation();
             } else {
                 log.error("// Received " + statusFamily + " response from remote web API: " + response);
+                break;
             }
-        } while (SUCCESSFUL.equals(statusFamily));
+        } while (true);
+        log.info("// Synced " + countTotal + " abilities from remote web API in total" +
+                (countNew.get() > 0 ? ", " + countNew + " of them have been inserted" : ""));
     }
 
     private AbilityData convertAbilityToJpaEntity(@Nonnull final AbilityIn received) {
