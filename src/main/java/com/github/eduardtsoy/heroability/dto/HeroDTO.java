@@ -1,14 +1,19 @@
 package com.github.eduardtsoy.heroability.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.code.siren4j.annotations.Siren4JEntity;
+import com.google.code.siren4j.component.impl.EntityImpl;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-public class HeroDTO {
+@Siren4JEntity
+public class HeroDTO extends EntityImpl {
 
     @JsonProperty("id")
     private Long id;
