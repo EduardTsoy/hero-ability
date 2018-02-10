@@ -1,6 +1,7 @@
 package com.github.eduardtsoy.heroability.endpoint;
 
 import com.github.eduardtsoy.heroability.dto.HeroDTO;
+import com.github.eduardtsoy.heroability.dto.HeroesDTO;
 import com.github.eduardtsoy.heroability.repository.HeroData;
 import com.github.eduardtsoy.heroability.repository.HeroRepository;
 import com.google.code.siren4j.component.Link;
@@ -16,10 +17,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,11 +44,15 @@ public class HeroEndpoint {
 
     @GET
     @ApiOperation("Get a list of heroes")
-    public List<HeroDTO> getHeroList() {
-        return heroRepository
+    public HeroesDTO getHeroList() {
+        final HeroesDTO result = new HeroesDTO();
+        result.getHeroes().addAll(heroRepository
                 .findAll().stream()
                 .map(this::convertDataToDTO)
-                .collect(Collectors.toList());
+                .peek(this::addSelfLink)
+                .collect(Collectors.toList()));
+        addHypermedia(result);
+        return result;
     }
 
     @GET
@@ -62,6 +64,7 @@ public class HeroEndpoint {
             return Response.status(NOT_FOUND).build();
         }
         final HeroDTO result = convertDataToDTO(heroData);
+        addHypermedia(result);
         return Response.ok(result).build();
     }
 
@@ -78,11 +81,10 @@ public class HeroEndpoint {
                 data.getArmour(),
                 data.getShield()
         );
-        addHypermedia(result);
         return result;
     }
 
-    private void addHypermedia(final HeroDTO result) {
+    private void addSelfLink(@Nonnull final HeroDTO result) {
         final List<Link> links = new ArrayList<>();
 
         final LinkImpl selfLink = new LinkImpl();
@@ -91,6 +93,17 @@ public class HeroEndpoint {
         final String absPath = uriInfo.getAbsolutePath().toString();
         selfLink.setHref(absPath);
         links.add(selfLink);
+
+        if (result.getLinks() == null) {
+            result.setLinks(new ArrayList<>());
+        }
+        result.getLinks().addAll(links);
+    }
+
+    private void addHypermedia(@Nonnull final HeroDTO result) {
+        addSelfLink(result);
+
+        final List<Link> links = new ArrayList<>();
 
         final LinkImpl abilitiesLink = new LinkImpl();
         abilitiesLink.setRel("abilities");
@@ -104,7 +117,29 @@ public class HeroEndpoint {
         heroesLink.setHref(uriInfo.getBaseUriBuilder().path(HEROS).toString());
         links.add(heroesLink);
 
-        result.setLinks(links);
+        result.getLinks().addAll(links);
+    }
+
+    private void addHypermedia(@Nonnull final HeroesDTO result) {
+        final List<Link> links = new ArrayList<>();
+
+        final LinkImpl selfLink = new LinkImpl();
+        selfLink.setRel("self");
+        selfLink.setTitle("Hero list");
+        final String absPath = uriInfo.getAbsolutePath().toString();
+        selfLink.setHref(absPath);
+        links.add(selfLink);
+
+        final LinkImpl apiRootLink = new LinkImpl();
+        apiRootLink.setRel("api-root");
+        apiRootLink.setTitle("APIs root");
+        apiRootLink.setHref(uriInfo.getBaseUri().toString());
+        links.add(apiRootLink);
+
+        if (result.getLinks() == null) {
+            result.setLinks(new ArrayList<>());
+        }
+        result.getLinks().addAll(links);
     }
 
 }

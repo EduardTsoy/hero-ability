@@ -133,7 +133,6 @@ public class SyncWithRemoteServer {
             log.debug("// Loading " + pageLink);
             final Response response = target.request(MediaType.APPLICATION_JSON).get();
             statusFamily = response.getStatusInfo().getFamily();
-            log.debug("// " + statusFamily);
             if (SUCCESSFUL.equals(statusFamily)) {
                 if (fromOurDatabase == null) {
                     fromOurDatabase = abilityRepository

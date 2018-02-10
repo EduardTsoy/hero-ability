@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,5 +20,6 @@ public class AbilitiesIn {
     private String next;
 
     // Data
+    @Nonnull
     private List<AbilityIn> data = new ArrayList<>();
 }

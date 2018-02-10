@@ -18,10 +18,10 @@ import java.util.List;
 @Component
 @Path(ApiRootEndpoint.ROOT)
 @Produces({MediaType.APPLICATION_JSON})
-@Api(value = ApiRootEndpoint.ROOT, description = "Welcome to API root")
+@Api(description = "Welcome to API root")
 public class ApiRootEndpoint {
 
-    static final String ROOT = "/";
+    static final String ROOT = "";
     @Context
     private UriInfo uriInfo;
 
@@ -44,13 +44,13 @@ public class ApiRootEndpoint {
 
         final LinkImpl herosApiLink = new LinkImpl();
         herosApiLink.setRel("hero-api");
-        herosApiLink.setTitle("Heroes API");
+        herosApiLink.setTitle("Hero list");
         herosApiLink.setHref(uriInfo.getAbsolutePathBuilder().path("heros").toString());
         links.add(herosApiLink);
 
         final LinkImpl abilitiesApiLink = new LinkImpl();
         abilitiesApiLink.setRel("abilities-api");
-        abilitiesApiLink.setTitle("Abilities API");
+        abilitiesApiLink.setTitle("Ability list");
         abilitiesApiLink.setHref(uriInfo.getBaseUriBuilder().path("abilities").toString());
         links.add(abilitiesApiLink);
 
