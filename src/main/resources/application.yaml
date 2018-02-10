@@ -1,11 +1,3 @@
-logging:
-  level:
-    com.github: INFO
-    org.hibernate: WARN
-  pattern:
-    console: "%d %-5level %logger : %msg%n"
-    file: "%d %-5level [%thread] %logger : %msg%n"
-
 flyway:
   locations: db/migration/{vendor}
 spring:
@@ -31,3 +23,28 @@ spring:
       settings:
         trace: false
         web-allow-others: true
+logging:
+  pattern:
+    console: "%d %-5level %logger : %msg%n"
+    file: "%d %-5level [%thread] %logger : %msg%n"
+---
+spring:
+  profiles: default
+logging:
+  level:
+    com.github: TRACE
+    org.hibernate: DEBUG
+---
+spring:
+  profiles: dev
+logging:
+  level:
+    com.github: TRACE
+    org.hibernate: DEBUG
+---
+spring:
+  profiles: prod
+logging:
+  level:
+    com.github: INFO
+    org.hibernate: WARN
