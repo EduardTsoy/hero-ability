@@ -15,7 +15,7 @@ import javax.annotation.Nonnull;
 @NoArgsConstructor
 @AllArgsConstructor
 @Siren4JEntity
-public class HeroesDTO extends EntityImpl {
+public class HeroesDTO extends BaseDTO {
 
     @Nonnull
     private CollectionResource<HeroDTO> heroes = new CollectionResource<>();

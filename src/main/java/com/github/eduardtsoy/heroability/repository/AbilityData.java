@@ -26,7 +26,10 @@ public class AbilityData {
     @Column(name = "is_ultimate")
     private Boolean ultimate;
 
-    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "abilities")
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "hero_ability",
+               joinColumns = @JoinColumn(name = "hero_id"),
+               inverseJoinColumns = @JoinColumn(name = "ability_id"))
     private List<HeroData> heroes = new ArrayList<>();
 
 }

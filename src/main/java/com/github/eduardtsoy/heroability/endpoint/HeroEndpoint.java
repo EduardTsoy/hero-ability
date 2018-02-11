@@ -1,11 +1,12 @@
 package com.github.eduardtsoy.heroability.endpoint;
 
+import com.github.eduardtsoy.heroability.dto.AbilitiesDTO;
+import com.github.eduardtsoy.heroability.dto.AbilityDTO;
 import com.github.eduardtsoy.heroability.dto.HeroDTO;
 import com.github.eduardtsoy.heroability.dto.HeroesDTO;
+import com.github.eduardtsoy.heroability.repository.AbilityData;
 import com.github.eduardtsoy.heroability.repository.HeroData;
 import com.github.eduardtsoy.heroability.repository.HeroRepository;
-import com.google.code.siren4j.component.Link;
-import com.google.code.siren4j.component.impl.LinkImpl;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +18,10 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -32,13 +34,15 @@ public class HeroEndpoint {
 
     static final String HEROES_PATH = "/heros";
 
+    public static final String HERO_ABILITIES_PATH = "abilities";
+
     @Context
     private UriInfo uriInfo;
 
     private final HeroRepository heroRepository;
 
     @Autowired
-    public HeroEndpoint(@Nonnull final HeroRepository heroRepository) {
+    public HeroEndpoint(final @Nonnull HeroRepository heroRepository) {
         this.heroRepository = heroRepository;
     }
 
@@ -48,8 +52,8 @@ public class HeroEndpoint {
         final HeroesDTO result = new HeroesDTO();
         result.getHeroes().addAll(heroRepository
                 .findAll().stream()
-                .map(this::convertDataToDTO)
-                .peek(this::addSelfLink)
+                .map(this::convertDataToHeroesDTO)
+                .peek(dto -> dto.safeLinks().add(LinkGen.getHeroLink(uriInfo, dto, "self")))
                 .collect(Collectors.toList()));
         addHypermedia(result);
         return result;
@@ -57,14 +61,32 @@ public class HeroEndpoint {
 
     @GET
     @Path("/{id}")
-    @ApiOperation("Get a hero")
+    @ApiOperation("Get information about a hero")
     public Response getHero(@NotNull @PathParam("id") final Long id) {
         final HeroData heroData = heroRepository.findOne(id);
         if (heroData == null) {
             return Response.status(NOT_FOUND).build();
         }
-        final HeroDTO result = convertDataToDTO(heroData);
+        final HeroDTO result = convertDataToHeroesDTO(heroData);
         addHypermedia(result);
+        return Response.ok(result).build();
+    }
+
+    @GET
+    @Path("/{id}/abilities")
+    @ApiOperation("Get information about hero's abilities")
+    public Response getHeroAbilities(@NotNull @PathParam("id") final Long id) {
+        final HeroData heroData = heroRepository.findOne(id);
+        if (heroData == null) {
+            return Response.status(NOT_FOUND).build();
+        }
+        final AbilitiesDTO result = new AbilitiesDTO();
+        result.getAbilities().addAll(
+                heroData.getAbilities().stream()
+                        .map(data -> convertDataToAbilityDTO(data))
+                        .peek(dto -> addHypermedia(dto))
+                        .collect(Collectors.toList()));
+        addHypermedia(result, convertDataToHeroesDTO(heroData));
         return Response.ok(result).build();
     }
 
@@ -72,7 +94,7 @@ public class HeroEndpoint {
      * PRIVATE METHODS
      */
 
-    private HeroDTO convertDataToDTO(@Nonnull final HeroData data) {
+    private HeroDTO convertDataToHeroesDTO(final @Nonnull HeroData data) {
         return new HeroDTO(
                 data.getId(),
                 data.getName(),
@@ -83,64 +105,34 @@ public class HeroEndpoint {
         );
     }
 
-    private void addSelfLink(@Nonnull final HeroDTO result) {
-        final List<Link> links = new ArrayList<>();
-
-        final LinkImpl selfLink = new LinkImpl();
-        selfLink.setRel("self");
-        selfLink.setTitle("Hero '" + result.getName() + "'");
-        selfLink.setHref(getSelfUri(result).toString());
-        links.add(selfLink);
-
-        if (result.getLinks() == null) {
-            result.setLinks(new ArrayList<>());
-        }
-        result.getLinks().addAll(links);
+    private AbilityDTO convertDataToAbilityDTO(final AbilityData data) {
+        return new AbilityDTO(
+                data.getId(),
+                data.getName(),
+                data.getDescription(),
+                data.getUltimate()
+        );
     }
 
-    private UriBuilder getSelfUri(final @Nonnull HeroDTO result) {
-        return uriInfo.getBaseUriBuilder().path(HEROES_PATH).path(result.getId().toString());
+    private void addHypermedia(final @Nonnull HeroDTO dto) {
+        dto.safeLinks().add(LinkGen.getHeroLink(uriInfo, dto, "self"));
+        dto.safeLinks().add(LinkGen.getHeroListLink(uriInfo, "list"));
+        dto.safeLinks().add(LinkGen.getHeroAbilitiesLink(uriInfo, dto, "abilities"));
     }
 
-    private void addHypermedia(@Nonnull final HeroDTO result) {
-        addSelfLink(result);
-
-        final List<Link> links = new ArrayList<>();
-
-        final LinkImpl abilitiesLink = new LinkImpl();
-        abilitiesLink.setRel("abilities");
-        abilitiesLink.setTitle("Abilities of hero '" + result.getName() + "'");
-        abilitiesLink.setHref(getSelfUri(result).path("abilities").toString());
-        links.add(abilitiesLink);
-
-        final LinkImpl listLink = new LinkImpl();
-        listLink.setRel("list");
-        listLink.setTitle("Hero list");
-        listLink.setHref(uriInfo.getBaseUriBuilder().path(HEROES_PATH).toString());
-        links.add(listLink);
-
-        result.getLinks().addAll(links);
+    private void addHypermedia(final @Nonnull HeroesDTO dto) {
+        dto.safeLinks().add(LinkGen.getHeroListLink(uriInfo, "self"));
+        dto.safeLinks().add(LinkGen.getApiRootLink(uriInfo));
     }
 
-    private void addHypermedia(@Nonnull final HeroesDTO result) {
-        final List<Link> links = new ArrayList<>();
+    private void addHypermedia(final @Nonnull AbilitiesDTO dto,
+                               final @Nonnull HeroDTO hero) {
+        dto.safeLinks().add(LinkGen.getHeroAbilitiesLink(uriInfo, hero, "self"));
+        dto.safeLinks().add(LinkGen.getHeroLink(uriInfo, hero, "hero"));
+    }
 
-        final LinkImpl selfLink = new LinkImpl();
-        selfLink.setRel("self");
-        selfLink.setTitle("Hero list");
-        selfLink.setHref(uriInfo.getBaseUriBuilder().path(HEROES_PATH).toString());
-        links.add(selfLink);
-
-        final LinkImpl apiRootLink = new LinkImpl();
-        apiRootLink.setRel("api-root");
-        apiRootLink.setTitle("APIs root");
-        apiRootLink.setHref(uriInfo.getBaseUri().toString());
-        links.add(apiRootLink);
-
-        if (result.getLinks() == null) {
-            result.setLinks(new ArrayList<>());
-        }
-        result.getLinks().addAll(links);
+    private void addHypermedia(final @Nonnull AbilityDTO dto) {
+        dto.safeLinks().add(LinkGen.getAbilityLink(uriInfo, dto, "self"));
     }
 
 }

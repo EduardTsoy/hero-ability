@@ -4,8 +4,6 @@ import com.github.eduardtsoy.heroability.dto.AbilitiesDTO;
 import com.github.eduardtsoy.heroability.dto.AbilityDTO;
 import com.github.eduardtsoy.heroability.repository.AbilityData;
 import com.github.eduardtsoy.heroability.repository.AbilityRepository;
-import com.google.code.siren4j.component.Link;
-import com.google.code.siren4j.component.impl.LinkImpl;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +15,10 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.core.*;
-import java.util.ArrayList;
-import java.util.List;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -38,7 +37,7 @@ public class AbilityEndpoint {
     private final AbilityRepository abilityRepository;
 
     @Autowired
-    public AbilityEndpoint(@Nonnull final AbilityRepository abilityRepository) {
+    public AbilityEndpoint(final @Nonnull AbilityRepository abilityRepository) {
         this.abilityRepository = abilityRepository;
     }
 
@@ -49,7 +48,7 @@ public class AbilityEndpoint {
         result.getAbilities().addAll(abilityRepository
                 .findAll().stream()
                 .map(this::convertDataToDTO)
-                .peek(this::addSelfLink)
+                .peek(dto -> dto.safeLinks().add(LinkGen.getAbilityLink(uriInfo, dto, "self")))
                 .collect(Collectors.toList()));
         addHypermedia(result);
         return result;
@@ -72,7 +71,7 @@ public class AbilityEndpoint {
      * PRIVATE METHODS
      */
 
-    private AbilityDTO convertDataToDTO(@Nonnull final AbilityData data) {
+    private AbilityDTO convertDataToDTO(final @Nonnull AbilityData data) {
         return new AbilityDTO(
                 data.getId(),
                 data.getName(),
@@ -81,58 +80,14 @@ public class AbilityEndpoint {
         );
     }
 
-    private void addSelfLink(@Nonnull final AbilityDTO result) {
-        final List<Link> links = new ArrayList<>();
-
-        final LinkImpl selfLink = new LinkImpl();
-        selfLink.setRel("self");
-        selfLink.setTitle("'" + result.getName() + "' ability");
-        selfLink.setHref(getSelfUri(result).toString());
-        links.add(selfLink);
-
-        if (result.getLinks() == null) {
-            result.setLinks(new ArrayList<>());
-        }
-        result.getLinks().addAll(links);
+    private void addHypermedia(final @Nonnull AbilitiesDTO dto) {
+        dto.safeLinks().add(LinkGen.getAbilityListLink(uriInfo, "self"));
+        dto.safeLinks().add(LinkGen.getApiRootLink(uriInfo));
     }
 
-    private UriBuilder getSelfUri(final @Nonnull AbilityDTO result) {
-        return uriInfo.getBaseUriBuilder().path(ABILITIES_PATH).path(result.getId().toString());
-    }
-
-    private void addHypermedia(@Nonnull final AbilityDTO result) {
-        addSelfLink(result);
-
-        final List<Link> links = new ArrayList<>();
-
-        final LinkImpl listLink = new LinkImpl();
-        listLink.setRel("list");
-        listLink.setTitle("Abilities list");
-        listLink.setHref(uriInfo.getBaseUriBuilder().path(ABILITIES_PATH).toString());
-        links.add(listLink);
-
-        result.getLinks().addAll(links);
-    }
-
-    private void addHypermedia(@Nonnull final AbilitiesDTO result) {
-        final List<Link> links = new ArrayList<>();
-
-        final LinkImpl selfLink = new LinkImpl();
-        selfLink.setRel("self");
-        selfLink.setTitle("Abilities list");
-        selfLink.setHref(uriInfo.getBaseUriBuilder().path(ABILITIES_PATH).toString());
-        links.add(selfLink);
-
-        final LinkImpl apiRootLink = new LinkImpl();
-        apiRootLink.setRel("api-root");
-        apiRootLink.setTitle("APIs root");
-        apiRootLink.setHref(uriInfo.getBaseUri().toString());
-        links.add(apiRootLink);
-
-        if (result.getLinks() == null) {
-            result.setLinks(new ArrayList<>());
-        }
-        result.getLinks().addAll(links);
+    private void addHypermedia(final @Nonnull AbilityDTO dto) {
+        dto.safeLinks().add(LinkGen.getAbilityLink(uriInfo, dto, "self"));
+        dto.safeLinks().add(LinkGen.getAbilityListLink(uriInfo, "list"));
     }
 
 }

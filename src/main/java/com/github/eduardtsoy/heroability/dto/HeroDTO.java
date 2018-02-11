@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Siren4JEntity
-public class HeroDTO extends EntityImpl {
+public class HeroDTO extends BaseDTO {
 
     @JsonProperty("id")
     private Long id;

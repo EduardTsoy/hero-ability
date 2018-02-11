@@ -1,7 +1,6 @@
 package com.github.eduardtsoy.heroability.dto;
 
 import com.google.code.siren4j.annotations.Siren4JEntity;
-import com.google.code.siren4j.component.impl.EntityImpl;
 import com.google.code.siren4j.resource.CollectionResource;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,7 +14,7 @@ import javax.annotation.Nonnull;
 @NoArgsConstructor
 @AllArgsConstructor
 @Siren4JEntity
-public class AbilitiesDTO extends EntityImpl {
+public class AbilitiesDTO extends BaseDTO {
 
     @Nonnull
     private CollectionResource<AbilityDTO> abilities = new CollectionResource<>();

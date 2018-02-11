@@ -18,6 +18,6 @@ CREATE TABLE ability (
 
 CREATE TABLE hero_ability (
   version    INT,
-  hero_id    BIGINT NOT NULL REFERENCES hero (id),
-  ability_id BIGINT NOT NULL REFERENCES ability (id)
+  hero_id    BIGINT NOT NULL,
+  ability_id BIGINT NOT NULL
 );

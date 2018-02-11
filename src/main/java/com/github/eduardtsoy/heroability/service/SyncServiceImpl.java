@@ -1,4 +1,4 @@
-package com.github.eduardtsoy.heroability;
+package com.github.eduardtsoy.heroability.service;
 
 import com.github.eduardtsoy.heroability.incoming.AbilitiesIn;
 import com.github.eduardtsoy.heroability.incoming.HeroesIn;
@@ -10,8 +10,8 @@ import com.github.eduardtsoy.heroability.repository.HeroData;
 import com.github.eduardtsoy.heroability.repository.HeroRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nonnull;
 import javax.ws.rs.client.Client;
@@ -21,49 +21,40 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.Response.Status.Family.REDIRECTION;
 import static javax.ws.rs.core.Response.Status.Family.SUCCESSFUL;
 
-@Component
+@Service
 @Slf4j
-public class SyncWithRemoteServer {
+public class SyncServiceImpl implements SyncService {
 
     private static final String SOURCE_API_BASE_URI = "https://overwatch-api.net/api/v1";
     private static final String HERO_URI_PATH = "/hero";
     private static final String ABILITY_URI_PATH = "/ability";
+
     private final HeroRepository heroRepository;
     private final AbilityRepository abilityRepository;
 
     private final Client client = ClientBuilder.newClient();
 
     @Autowired
-    public SyncWithRemoteServer(@Nonnull final HeroRepository heroRepository,
-                                @Nonnull final AbilityRepository abilityRepository) {
+    public SyncServiceImpl(final @Nonnull HeroRepository heroRepository,
+                           final @Nonnull AbilityRepository abilityRepository) {
         this.heroRepository = heroRepository;
         this.abilityRepository = abilityRepository;
     }
 
-    @Scheduled(fixedDelay = 60000) // @Scheduled(cron = "*/30 */1 * * * *")
-    synchronized public void syncDatabase() {
-        syncHeroes();
-        syncAbilities();
-        heroRepository.flush();
-    }
-
-    /* ------------------
-     * PRIVATE METHODS
-     */
-
-    private void syncHeroes() {
+    @Override
+    @Transactional
+    public void syncHeroes() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + HERO_URI_PATH);
         Map<Long, HeroData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
         int countTotal = 0;
-        final AtomicInteger countNew = new AtomicInteger();
+        int countNew = 0;
         // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
@@ -81,7 +72,7 @@ public class SyncWithRemoteServer {
                 log.debug("// " + heroes);
                 final Map<Long, HeroData> localData = fromOurDatabase;
                 countTotal += heroes.getData().size();
-                heroes.getData().forEach(received -> {
+                for (HeroIn received : heroes.getData()) {
                     if (localData.containsKey(received.getId())) {
                         final HeroData existing = localData.get(received.getId());
                         existing.setName(received.getName());
@@ -91,10 +82,10 @@ public class SyncWithRemoteServer {
                         existing.setShield(received.getShield());
                         heroRepository.save(existing);
                     } else {
-                        countNew.incrementAndGet();
+                        countNew++;
                         heroRepository.save(convertHeroToJpaEntity(received));
                     }
-                });
+                }
                 if (heroes.getNext() == null) {
                     break;
                 }
@@ -107,21 +98,12 @@ public class SyncWithRemoteServer {
             }
         } while (true);
         log.info("// Synced " + countTotal + " heroes from remote web API in total" +
-                (countNew.get() > 0 ? ", " + countNew + " of them have been inserted" : ""));
+                (countNew > 0 ? ", " + countNew + " of them have been inserted" : ""));
     }
 
-    private HeroData convertHeroToJpaEntity(final HeroIn received) {
-        final HeroData result = new HeroData();
-        result.setId(received.getId());
-        result.setName(received.getName());
-        result.setRealName(received.getRealName());
-        result.setHealth(received.getHealth());
-        result.setArmour(received.getArmour());
-        result.setShield(received.getShield());
-        return result;
-    }
-
-    private void syncAbilities() {
+    @Override
+    @Transactional
+    public void syncAbilities() {
         URI pageLink = URI.create(SOURCE_API_BASE_URI + ABILITY_URI_PATH);
         Map<Long, AbilityData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
@@ -154,13 +136,24 @@ public class SyncWithRemoteServer {
                         existing.setName(received.getName());
                         existing.setDescription(received.getDescription());
                         existing.setUltimate(received.getUltimate());
-                        abilityRepository.save(existing);
+                        abilityRepository.saveAndFlush(existing);
                     } else {
                         countNew++;
+                        final AbilityData newAbility = abilityRepository
+                                .saveAndFlush(convertAbilityToJpaEntity(received));
                         if (received.getHero() != null) {
                             countNewAssociations++;
+                            final HeroData hero = heroRepository.findOne(received.getHero().getId());
+                            if (hero != null) {
+                                newAbility.getHeroes().add(hero);
+                                // log.debug("// " + newAbility);
+                                abilityRepository.saveAndFlush(newAbility);
+                            } else {
+                                log.error("// Cannot find Hero [id = " + received.getHero()
+                                                                                 .getId() + "] in our local database");
+                            }
                         }
-                        abilityRepository.save(convertAbilityToJpaEntity(received));
+
                     }
                 }
                 if (abilities.getNext() == null) {
@@ -180,16 +173,27 @@ public class SyncWithRemoteServer {
                 (countNewAssociations > 0 ? ", " + countNewAssociations + " of them have been inserted" : ""));
     }
 
-    private AbilityData convertAbilityToJpaEntity(@Nonnull final AbilityIn received) {
+    /* ------------------
+     * PRIVATE METHODS
+     */
+
+    private HeroData convertHeroToJpaEntity(final HeroIn received) {
+        final HeroData result = new HeroData();
+        result.setId(received.getId());
+        result.setName(received.getName());
+        result.setRealName(received.getRealName());
+        result.setHealth(received.getHealth());
+        result.setArmour(received.getArmour());
+        result.setShield(received.getShield());
+        return result;
+    }
+
+    private AbilityData convertAbilityToJpaEntity(final @Nonnull AbilityIn received) {
         final AbilityData result = new AbilityData();
         result.setId(received.getId());
         result.setName(received.getName());
         result.setDescription(received.getDescription());
         result.setUltimate(received.getUltimate());
-        if (received.getHero() != null) {
-            result.getHeroes().add(heroRepository.findOne(received.getHero().getId()));
-        }
         return result;
     }
-
 }

@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Siren4JEntity
-public class AbilityDTO extends EntityImpl {
+public class AbilityDTO extends BaseDTO {
 
     @JsonProperty("id")
     private Long id;

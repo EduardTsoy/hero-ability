@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -26,11 +27,7 @@ public class HeroData {
     private Integer armour;
     private Integer shield;
 
-    @ManyToMany(fetch = FetchType.LAZY,
-                cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(name = "hero_ability",
-               joinColumns = @JoinColumn(name = "hero_id"),
-               inverseJoinColumns = @JoinColumn(name = "ability_id"))
-    private List<AbilityData> abilities;
+    @ManyToMany(mappedBy = "heroes", fetch = FetchType.EAGER)
+    private List<AbilityData> abilities = new ArrayList<>();
 
 }
