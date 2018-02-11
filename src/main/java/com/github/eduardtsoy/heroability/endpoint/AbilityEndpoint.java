@@ -6,6 +6,7 @@ import com.github.eduardtsoy.heroability.repository.AbilityData;
 import com.github.eduardtsoy.heroability.repository.AbilityRepository;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,7 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 @Path(AbilityEndpoint.ABILITIES_PATH)
 @Produces({MediaType.APPLICATION_JSON})
 @Api(value = AbilityEndpoint.ABILITIES_PATH, description = "Welcome to Abilities API")
+@Slf4j
 public class AbilityEndpoint {
 
     static final String ABILITIES_PATH = "/abilities";
@@ -60,6 +62,7 @@ public class AbilityEndpoint {
     public Response getAbility(@NotNull @PathParam("id") final Long id) {
         final AbilityData abilityData = abilityRepository.findOne(id);
         if (abilityData == null) {
+            log.warn("// Ability [id = " + id + "] " + NOT_FOUND);
             return Response.status(NOT_FOUND).build();
         }
         final AbilityDTO result = convertDataToDTO(abilityData);

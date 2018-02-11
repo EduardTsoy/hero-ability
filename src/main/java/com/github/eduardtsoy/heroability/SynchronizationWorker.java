@@ -20,7 +20,7 @@ public class SynchronizationWorker {
         this.syncService = syncService;
     }
 
-    @Scheduled(fixedDelay = 60000) // @Scheduled(cron = "*/30 */1 * * * *")
+    @Scheduled(fixedDelay = 60000) // or cron: @Scheduled(cron = "0 */1 * * * *")
     @Transactional
     synchronized public void syncDatabase() {
         syncService.syncHeroes();

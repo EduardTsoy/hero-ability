@@ -9,6 +9,7 @@ import com.github.eduardtsoy.heroability.repository.HeroData;
 import com.github.eduardtsoy.heroability.repository.HeroRepository;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,7 @@ import static javax.ws.rs.core.Response.Status.NOT_FOUND;
 @Path(HeroEndpoint.HEROES_PATH)
 @Produces({MediaType.APPLICATION_JSON})
 @Api(value = HeroEndpoint.HEROES_PATH, description = "Welcome to Heroes API")
+@Slf4j
 public class HeroEndpoint {
 
     static final String HEROES_PATH = "/heros";
@@ -65,6 +67,7 @@ public class HeroEndpoint {
     public Response getHero(@NotNull @PathParam("id") final Long id) {
         final HeroData heroData = heroRepository.findOne(id);
         if (heroData == null) {
+            log.warn("// Hero [id = " + id + "] " + NOT_FOUND);
             return Response.status(NOT_FOUND).build();
         }
         final HeroDTO result = convertDataToHeroesDTO(heroData);
@@ -78,6 +81,7 @@ public class HeroEndpoint {
     public Response getHeroAbilities(@NotNull @PathParam("id") final Long id) {
         final HeroData heroData = heroRepository.findOne(id);
         if (heroData == null) {
+            log.warn("// Hero [id = " + id + "] " + NOT_FOUND);
             return Response.status(NOT_FOUND).build();
         }
         final AbilitiesDTO result = new AbilitiesDTO();

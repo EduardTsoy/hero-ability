@@ -11,20 +11,12 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        show_sql: true
-        use_sql_comments: true
-        format_sql: true
-        type: trace
   h2:
     console:
       enabled: true
       path: /console
       settings:
         trace: false
-        web-allow-others: true
 logging:
   pattern:
     console: "%d %-5level %logger : %msg%n"
@@ -34,11 +26,19 @@ spring:
   profiles: default
 logging:
   level:
-    com.github: TRACE
-    org.hibernate: TRACE
+    com.github: INFO
+    org.hibernate: INFO
 ---
 spring:
   profiles: dev
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        show_sql: true
+        use_sql_comments: true
+        format_sql: true
+        type: trace
 logging:
   level:
     com.github: TRACE
@@ -46,6 +46,10 @@ logging:
 ---
 spring:
   profiles: prod
+  h2:
+    console:
+      settings:
+        web-allow-others: false
 logging:
   level:
     com.github: INFO

@@ -111,6 +111,7 @@
                 </executions>
             </plugin>
         </plugins>
+        <finalName>hero-ability</finalName>
     </build>
 
 </project>
