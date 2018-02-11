@@ -17,14 +17,19 @@ public class HeroIn {
     @NotNull
     @JsonProperty("id")
     private Long id;
+
     @JsonProperty("name")
     private String name;
+
     @JsonProperty("real_name")
     private String realName;
+
     @JsonProperty("health")
     private Integer health;
+
     @JsonProperty("armour")
     private Integer armour;
+
     @JsonProperty("shield")
     private Integer shield;
 

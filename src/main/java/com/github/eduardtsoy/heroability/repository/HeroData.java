@@ -4,10 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Version;
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -26,5 +25,12 @@ public class HeroData {
     private Integer health;
     private Integer armour;
     private Integer shield;
+
+    @ManyToMany(fetch = FetchType.LAZY,
+                cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name = "hero_ability",
+               joinColumns = @JoinColumn(name = "hero_id"),
+               inverseJoinColumns = @JoinColumn(name = "ability_id"))
+    private List<AbilityData> abilities;
 
 }

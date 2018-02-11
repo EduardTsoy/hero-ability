@@ -47,8 +47,8 @@ public class SyncWithRemoteServer {
         this.abilityRepository = abilityRepository;
     }
 
-    @Scheduled(cron = "*/20 */1 * * * *")
-    public void syncDatabase() {
+    @Scheduled(fixedDelay = 60000) // @Scheduled(cron = "*/30 */1 * * * *")
+    synchronized public void syncDatabase() {
         syncHeroes();
         syncAbilities();
         heroRepository.flush();
@@ -126,7 +126,9 @@ public class SyncWithRemoteServer {
         Map<Long, AbilityData> fromOurDatabase = null;
         Response.Status.Family statusFamily;
         int countTotal = 0;
-        final AtomicInteger countNew = new AtomicInteger();
+        int countNew = 0;
+        int countTotalAssociations = 0;
+        int countNewAssociations = 0;
         // Loop through pages
         do {
             final WebTarget target = client.target(pageLink);
@@ -143,7 +145,10 @@ public class SyncWithRemoteServer {
                 final AbilitiesIn abilities = response.readEntity(AbilitiesIn.class);
                 final Map<Long, AbilityData> localData = fromOurDatabase;
                 countTotal += abilities.getData().size();
-                abilities.getData().forEach(received -> {
+                for (AbilityIn received : abilities.getData()) {
+                    if (received.getHero() != null) {
+                        countTotalAssociations++;
+                    }
                     if (localData.containsKey(received.getId())) {
                         final AbilityData existing = localData.get(received.getId());
                         existing.setName(received.getName());
@@ -151,10 +156,13 @@ public class SyncWithRemoteServer {
                         existing.setUltimate(received.getUltimate());
                         abilityRepository.save(existing);
                     } else {
-                        countNew.incrementAndGet();
+                        countNew++;
+                        if (received.getHero() != null) {
+                            countNewAssociations++;
+                        }
                         abilityRepository.save(convertAbilityToJpaEntity(received));
                     }
-                });
+                }
                 if (abilities.getNext() == null) {
                     break;
                 }
@@ -167,7 +175,9 @@ public class SyncWithRemoteServer {
             }
         } while (true);
         log.info("// Synced " + countTotal + " abilities from remote web API in total" +
-                (countNew.get() > 0 ? ", " + countNew + " of them have been inserted" : ""));
+                (countNew > 0 ? ", " + countNew + " of them have been inserted" : ""));
+        log.info("// Synced " + countTotalAssociations + " associations from remote web API in total" +
+                (countNewAssociations > 0 ? ", " + countNewAssociations + " of them have been inserted" : ""));
     }
 
     private AbilityData convertAbilityToJpaEntity(@Nonnull final AbilityIn received) {
@@ -176,6 +186,9 @@ public class SyncWithRemoteServer {
         result.setName(received.getName());
         result.setDescription(received.getDescription());
         result.setUltimate(received.getUltimate());
+        if (received.getHero() != null) {
+            result.getHeroes().add(heroRepository.findOne(received.getHero().getId()));
+        }
         return result;
     }
 

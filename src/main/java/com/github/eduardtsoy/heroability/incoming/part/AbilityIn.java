@@ -17,11 +17,17 @@ public class AbilityIn {
     @NotNull
     @JsonProperty("id")
     private Long id;
+
     @JsonProperty("name")
     private String name;
+
     @JsonProperty("description")
     private String description;
+
     @JsonProperty("is_ultimate")
     private Boolean ultimate;
+
+    @JsonProperty("hero")
+    private HeroIn hero;
 
 }
